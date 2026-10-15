@@ -308,7 +308,7 @@ function renderDecoCore() {
 }
 
 // --- Gráfica del perfil: profundidad, techo con tus GF y techo con el valor M (GF 100 %) ---
-const COL = { perfil: '#2fa38d', gf: '#c4842e', m: '#d0588a' }; // validados sobre el fondo oscuro
+const COL = { perfil: '#2fb6c6', gf: '#c4842e', m: '#d0588a' }; // validados sobre el fondo oscuro
 let GRAF = null;
 function dibujarPerfil() {
   const box = $('dc-chart');

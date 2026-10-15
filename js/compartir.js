@@ -2,7 +2,7 @@
 // ===== Compartir imagen =====
 const IMG = {
   ancho: 540, escala: 2, margen: 22,
-  c: { fondo: '#0b1216', surf: '#121b20', linea: '#223038', tx: '#e2eaed', tx2: '#a9b8be', mut: '#71858d', acc: '#3fb8a0', warn: '#e3a44a', perfil: '#2fa38d', gf: '#c4842e', m: '#d0588a' },
+  c: { fondo: '#050c13', surf: '#0b1620', linea: '#172636', tx: '#e4eff5', tx2: '#a1b6c4', mut: '#6a8296', acc: '#3ccbdc', warn: '#f0a848', perfil: '#2fb6c6', gf: '#c4842e', m: '#d0588a' },
   sans: '"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
 };
 
