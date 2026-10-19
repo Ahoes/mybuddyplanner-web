@@ -42,6 +42,7 @@ function renderGM() {
   const d1 = num('gm-d1'), d2 = num('gm-d2'), out = $('gm-out');
   GM = null;
   if (d1 == null || d2 == null || d1 <= 0 || d2 < 0) { out.innerHTML = msg('info', 'Introduce la profundidad inicial y la final.'); return; }
+  if (d1 > 150) { out.innerHTML = msg('bad', 'Profundidad fuera de rango (máximo 150 m).'); return; }
   if (d2 >= d1) { out.innerHTML = msg('bad', 'La profundidad final tiene que ser menor que la inicial.'); return; }
   if (!bib) { out.innerHTML = msg('info', 'Elige la botella.'); return; }
   const r = ENG.gasMinimo(d1, d2, bib); GM = { ...r, d1, d2 };
@@ -67,7 +68,8 @@ function renderCS() {
   $('cs-gm-hint').textContent = !GM ? 'Calcula el gas mínimo en su pestaña o escríbelo aquí.'
     : gm === GM.bares ? `Sale de la pestaña Gas mínimo (${Fn(GM.d1)} → ${Fn(GM.d2)} m con ${bibName()}). Puedes cambiarlo.`
     : `Cambiado a mano. El planificado en la pestaña Gas mínimo es ${GM.bares} bar.`;
-  if (!bib || gm == null || gm < 0 || p == null || d == null || sac == null || d < 0 || sac <= 0) { out.innerHTML = msg('info', 'Completa los datos para calcular el tiempo.'); return; }
+  if (!bib || gm == null || gm < 0 || p == null || d == null || sac == null || p <= 0 || d < 0 || sac <= 0) { out.innerHTML = msg('info', 'Completa los datos para calcular el tiempo.'); return; }
+  if (d > 150 || p > 350 || gm > 350 || sac > 100) { out.innerHTML = msg('bad', 'Revisa los datos: profundidad hasta 150 m, presiones hasta 350 bar y consumo hasta 100 L/min.'); return; }
   const bares = p - gm;
   if (bares <= 0) { out.innerHTML = msg('bad', `La presión total (${Fn(p)} bar) no cubre el gas mínimo (${Fn(gm)} bar). No queda gas para gastar.`); return; }
   const r = ENG.consumo(bib, bares, d, sac);
@@ -88,6 +90,7 @@ function renderMZ() {
   if (o2 == null || o2 <= 0 || o2 > 100 || he < 0) { out.innerHTML = msg('info', 'Introduce el porcentaje de oxígeno y de helio.'); return; }
   if (o2 + he > 100) { out.innerHTML = msg('bad', 'Oxígeno y helio suman más del 100 %.'); return; }
   if (pp == null || pp <= 0 || (he > 0 && em == null)) { out.innerHTML = msg('info', he > 0 ? 'Introduce la ppO₂ máxima y la END máxima.' : 'Introduce la ppO₂ máxima.'); return; }
+  if (pp < 0.5 || pp > 1.7 || (em != null && (em <= 0 || em > 100))) { out.innerHTML = msg('bad', 'Revisa los datos: ppO₂ entre 0,5 y 1,7 bar y END entre 1 y 100 m.'); return; }
   const r = ENG.mezcla(o2, he, pp, em ?? 0);
   let h = '<div class="res"><div class="k">Profundidad máxima operativa</div>';
   if (r.conHelio) h += `<div class="duo" style="margin-top:8px"><div><div class="big">${F(r.mod, 1)} <small>m</small></div><div class="sub">Por oxígeno (MOD)</div></div><div><div class="big">${F(r.profEnd, 1)} <small>m</small></div><div class="sub">Por narcosis (END ${Fn(em)} m)</div></div></div>`;
@@ -103,6 +106,7 @@ function renderMI() {
   const d = num('mi-d'), pp = num('mi-pp'), em = num('mz-end'), out = $('mi-out'), conHe = $('mi-he').checked;
   $('mi-hint').textContent = conHe ? `El helio se calcula con la END máxima de arriba: ${em != null ? Fn(em) : '–'} m.` : 'Sin helio: solo se calcula el oxígeno (nitrox).';
   if (d == null || d <= 0 || pp == null || pp <= 0 || (conHe && em == null)) { out.innerHTML = msg('info', conHe ? 'Introduce la profundidad, la ppO₂ y la END máxima (arriba, en Mezcla).' : 'Introduce la profundidad y la ppO₂.'); return; }
+  if (d > 150 || pp < 0.5 || pp > 1.7 || (conHe && (em <= 0 || em > 100))) { out.innerHTML = msg('bad', 'Revisa los datos: profundidad hasta 150 m, ppO₂ entre 0,5 y 1,7 bar y END entre 1 y 100 m.'); return; }
   const r = ENG.mezclaIdeal(d, pp, em ?? 0, conHe);
   let h = `<div class="res"><div class="k">Mezcla recomendada para ${Fn(d)} m</div><div class="big" style="font-size:34px">${ENG.nombreGas(r.o2, r.he)}</div><div class="sub">O₂ ${r.o2} %, He ${r.he} %, N₂ ${r.n2} %</div></div>
   <div class="card"><h3>Desglose</h3>
@@ -412,7 +416,7 @@ function renderGB() {
   if (!$('gb-mod').value) return void (out.innerHTML = msg('info', 'Elige el modelo de gas (real o ideal).'));
   if (vol == null || vol <= 0) return void (out.innerHTML = msg('info', 'Indica el volumen de la botella.'));
   if (p1 == null || p1 <= 0 || o1 == null || o1 <= 0) return void (out.innerHTML = msg('info', 'Indica la presión y el oxígeno de la mezcla que quieres. Si la botella no está vacía, indica también lo que queda.'));
-  if (p0 < 0 || o0 < 0 || h0 < 0 || h1 < 0 || o1 > 100 || o0 > 100) return void (out.innerHTML = msg('bad', 'Revisa los porcentajes y las presiones.'));
+  if (p0 < 0 || o0 < 0 || h0 < 0 || h1 < 0 || o1 > 100 || o0 > 100 || p1 > 350 || p0 > 350) return void (out.innerHTML = msg('bad', 'Revisa los porcentajes y las presiones.'));
   if (p0 > 0 && o0 <= 0) return void (out.innerHTML = msg('bad', 'Indica el oxígeno de lo que queda en la botella.'));
   if (pr.he < 0 || pr.o2 < 0 || pr.aire < 0) return void (out.innerHTML = msg('bad', 'Los precios no pueden ser negativos.'));
   const real = $('gb-mod').value === 'real';
