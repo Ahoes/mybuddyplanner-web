@@ -91,7 +91,7 @@ function renderMZ() {
   if (o2 == null || o2 <= 0 || o2 > 100 || he < 0) { out.innerHTML = msg('info', 'Introduce el porcentaje de oxígeno y de helio.'); return; }
   if (o2 + he > 100) { out.innerHTML = msg('bad', 'Oxígeno y helio suman más del 100 %.'); return; }
   if (pp == null || pp <= 0 || (he > 0 && em == null)) { out.innerHTML = msg('info', he > 0 ? 'Introduce la ppO₂ máxima y la END máxima.' : 'Introduce la ppO₂ máxima.'); return; }
-  if (pp < 0.5 || pp > 1.7 || (em != null && (em <= 0 || em > 100))) { out.innerHTML = msg('bad', 'Revisa los datos: ppO₂ entre 0,5 y 1,7 bar y END entre 1 y 100 m.'); return; }
+  if (pp < 0.5 || pp > 1.6 || (em != null && (em <= 0 || em > 100))) { out.innerHTML = msg('bad', 'Revisa los datos: ppO₂ entre 0,5 y 1,6 bar y END entre 1 y 100 m.'); return; }
   const r = ENG.mezcla(o2, he, pp, em ?? 0);
   let h = '<div class="res"><div class="k">Profundidad máxima operativa</div>';
   if (r.conHelio) h += `<div class="duo" style="margin-top:8px"><div><div class="big">${F(r.mod, 1)} <small>m</small></div><div class="sub">Por oxígeno (MOD)</div></div><div><div class="big">${F(r.profEnd, 1)} <small>m</small></div><div class="sub">Por narcosis (END ${Fn(em)} m)</div></div></div>`;
@@ -107,7 +107,7 @@ function renderMI() {
   const d = num('mi-d'), pp = num('mi-pp'), em = num('mz-end'), out = $('mi-out'), conHe = $('mi-he').checked;
   $('mi-hint').textContent = conHe ? `El helio se calcula con la END máxima de arriba: ${em != null ? Fn(em) : '–'} m.` : 'Sin helio: solo se calcula el oxígeno (nitrox).';
   if (d == null || d <= 0 || pp == null || pp <= 0 || (conHe && em == null)) { out.innerHTML = msg('info', conHe ? 'Introduce la profundidad, la ppO₂ y la END máxima (arriba, en Mezcla).' : 'Introduce la profundidad y la ppO₂.'); return; }
-  if (d > 150 || pp < 0.5 || pp > 1.7 || (conHe && (em <= 0 || em > 100))) { out.innerHTML = msg('bad', 'Revisa los datos: profundidad hasta 150 m, ppO₂ entre 0,5 y 1,7 bar y END entre 1 y 100 m.'); return; }
+  if (d > 150 || pp < 0.5 || pp > 1.4 || (conHe && (em <= 0 || em > 100))) { out.innerHTML = msg('bad', 'Revisa los datos: profundidad hasta 150 m, ppO₂ entre 0,5 y 1,4 bar y END entre 1 y 100 m.'); return; }
   const r = ENG.mezclaIdeal(d, pp, em ?? 0, conHe);
   let h = `<div class="res"><div class="k">Mezcla recomendada para ${Fn(d)} m</div><div class="big" style="font-size:34px">${ENG.nombreGas(r.o2, r.he)}</div><div class="sub">O₂ ${r.o2} %, He ${r.he} %, N₂ ${r.n2} %</div></div>
   <div class="card"><h3>Desglose</h3>
@@ -175,7 +175,7 @@ function renderDecoCore() {
   const d = num('dc-d'), t = num('dc-t'), gfl = num('dc-gfl'), gfh = num('dc-gfh'), alt = $('dc-alt').value === '' ? null : Number($('dc-alt').value);
   const fo2 = num('dc-fo2'), fhe = num('dc-fhe') ?? 0, vd = num('dc-vd'), va = num('dc-va');
   const ppMax = num('dc-ppf'), ppDeco = num('dc-ppd'), endMax = num('mz-end');
-  const ppDecoOk = ppDeco != null && ppDeco >= 1 && ppDeco <= 1.7;
+  const ppDecoOk = ppDeco != null && ppDeco >= 1 && ppDeco <= 1.6;
   // cambio de gas: a la primera parada (múltiplo de 3 m) donde la ppO₂ no pasa del máximo de deco
   const cambio = (o2) => Math.floor((ppDeco / (o2 / 100) - 1) * 10 / 3 + 1e-9) * 3;
   $('dc-gh').hidden = !decoGases.length; // la nota solo tiene sentido con gases de deco
@@ -192,8 +192,8 @@ function renderDecoCore() {
   if (gfl == null || gfh == null || gfl <= 0 || gfh > 100 || gfl > gfh) return void (out.innerHTML = msg('bad', 'Revisa los GF: entre 1 y 100, y el bajo no puede ser mayor que el alto.'));
   if (vd == null || va == null || vd < 3 || vd > 30 || va < 3 || va > 18) return void (out.innerHTML = msg('bad', 'Revisa las velocidades: descenso entre 3 y 30 m/min, ascenso entre 3 y 18 m/min.'));
   if (fo2 == null || fo2 <= 0 || fhe < 0 || fo2 + fhe > 100) return void (out.innerHTML = msg('bad', 'Revisa el gas de fondo: O₂ y He no pueden sumar más del 100 %.'));
-  if (ppMax == null || ppMax < 0.5 || ppMax > 1.6) return void (out.innerHTML = msg('bad', 'Revisa la ppO₂ máxima de fondo: entre 0,5 y 1,6 bar.'));
-  if (!ppDecoOk) return void (out.innerHTML = msg('bad', 'Revisa la ppO₂ máxima de deco: entre 1,0 y 1,7 bar.'));
+  if (ppMax == null || ppMax < 0.5 || ppMax > 1.4) return void (out.innerHTML = msg('bad', 'Revisa la ppO₂ máxima de fondo: entre 0,5 y 1,4 bar.'));
+  if (!ppDecoOk) return void (out.innerHTML = msg('bad', 'Revisa la ppO₂ máxima de deco: entre 1,0 y 1,6 bar.'));
   if (fo2 > 40) return void (out.innerHTML = msg('bad', 'Como gas de fondo el máximo es EAN40. A partir de EAN41 ya se considera gas descompresivo: añádelo en los gases de deco.'));
   const validos = decoGases.map((g, i) => ({ ...g, i })).filter(g => g.o2 > 0 && g.o2 <= 100 && (g.he || 0) >= 0 && g.o2 + (g.he || 0) <= 100);
 
