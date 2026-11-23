@@ -206,8 +206,8 @@ const ENG = (() => {
     // Techo con GF variable como Subsurface: la línea recta va sobre la presión tolerada,
     // entre el GF alto en superficie y el GF bajo en el ancla (presión pAncla).
     let pAncla;
-    function techoGF(n2, he) {
-      const gfL = p.gfLow / 100, gfH = p.gfHigh / 100, s = psurf, g = pAncla;
+    function techoGF(n2, he, ancla = pAncla) {
+      const gfL = p.gfLow / 100, gfH = p.gfHigh / 100, s = psurf, g = ancla;
       let ret = 0;
       for (let i = 0; i < 16; i++) {
         const pt = n2[i] + he[i];
@@ -224,12 +224,16 @@ const ENG = (() => {
 
     // Prueba de ascenso (como Subsurface): sube de d a "hasta" en pasos de 2 s y en cada paso
     // el techo no puede quedar por debajo de la profundidad a la que se va a subir.
+    // Como Subsurface, en cada paso de la prueba el ancla del GF bajo sube si el techo con GF bajo
+    // la supera (en inmersiones cortas los tejidos rápidos siguen cargando al empezar a subir).
     function puedeSubir(d, hasta, vel, g) {
       const n2 = pN2.slice(), he = pHe.slice(), dt = 2 / 60;
+      let ancla = pAncla;
       while (d > hasta + 1e-9) {
         const paso = Math.min(pasoTramo(vel), d);
         cargar(n2, he, d, d, dt, g);
-        if (techoGF(n2, he) > d - paso + 1e-6) return false;
+        ancla = Math.max(ancla, presionTolerada(p.gfLow / 100, n2, he));
+        if (techoGF(n2, he, ancla) > d - paso + 1e-6) return false;
         d -= paso;
       }
       return true;
@@ -316,7 +320,8 @@ const ENG = (() => {
         const s = (pt - pamb) / (pamb / b + a - pamb); // fracción del valor M a esta profundidad
         if (s > sat) { sat = s; comp = i + 1; }
       }
-      return { t: m.t, d: m.d, gas: m.gas, techoGF: Math.max(0, techoGF(m.n2, m.he)),
+      // techo de la gráfica con el ancla que usaría una prueba de subida desde ese momento
+      return { t: m.t, d: m.d, gas: m.gas, techoGF: Math.max(0, techoGF(m.n2, m.he, Math.max(pAncla, presionTolerada(gfL, m.n2, m.he)))),
         techoM: Math.max(0, (presionTolerada(1, m.n2, m.he) - psurf) / barM), sat: sat * 100, comp };
     });
 
