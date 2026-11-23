@@ -69,7 +69,8 @@ function renderCS() {
     : gm === GM.bares ? `Sale de la pestaña Gas mínimo (${Fn(GM.d1)} → ${Fn(GM.d2)} m con ${bibName()}). Puedes cambiarlo.`
     : `Cambiado a mano. El planificado en la pestaña Gas mínimo es ${GM.bares} bar.`;
   if (!bib || gm == null || gm < 0 || p == null || d == null || sac == null || p <= 0 || d < 0 || sac <= 0) { out.innerHTML = msg('info', 'Completa los datos para calcular el tiempo.'); return; }
-  if (d > 150 || p > 350 || gm > 350 || sac > 100) { out.innerHTML = msg('bad', 'Revisa los datos: profundidad hasta 150 m, presiones hasta 350 bar y consumo hasta 100 L/min.'); return; }
+  // el gas mínimo no se limita: si pasa de 350 bar, la presión (máx. 350) no lo cubre y se avisa abajo
+  if (d > 150 || p > 350 || sac > 100) { out.innerHTML = msg('bad', 'Revisa los datos: profundidad hasta 150 m, presiones hasta 350 bar y consumo hasta 100 L/min.'); return; }
   const bares = p - gm;
   if (bares <= 0) { out.innerHTML = msg('bad', `La presión total (${Fn(p)} bar) no cubre el gas mínimo (${Fn(gm)} bar). No queda gas para gastar.`); return; }
   const r = ENG.consumo(bib, bares, d, sac);

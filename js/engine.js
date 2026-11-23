@@ -81,6 +81,15 @@ const ENG = (() => {
   const PWV = 0.0627;
   const LN2 = Math.log(2);
 
+  // Niveles de parada de Subsurface: cada 3 m hasta 90 m, cada 10 m hasta 200 m y cada 20 m hasta 380 m
+  const NIVELES = [];
+  for (let m = 0; m <= 90; m += 3) NIVELES.push(m);
+  for (let m = 100; m <= 200; m += 10) NIVELES.push(m);
+  for (let m = 220; m <= 380; m += 20) NIVELES.push(m);
+  const nivelBajo = (x) => { let r = 0; for (const m of NIVELES) if (m < x - 1e-9) r = m; return r; }; // el nivel inmediatamente por encima
+  // Subsurface sube en tramos de 2 s con la velocidad en mm/s enteros (10 m/min = 166 mm/s): metros por tramo
+  const pasoTramo = (vel) => Math.max(1, Math.trunc(vel * 1000 / 60 + 1e-9)) * 2 / 1000;
+
   // tabla NOAA de límites CNS (min) por ppO2
   const CNS_T = [[0.6, 720], [0.7, 570], [0.8, 450], [0.9, 360], [1.0, 300], [1.1, 240], [1.2, 210], [1.3, 180], [1.4, 150], [1.5, 120], [1.6, 45], [1.7, 30], [2.0, 10]];
   function cnsLimite(p) {
@@ -155,8 +164,13 @@ const ENG = (() => {
     }
     function segmento(d0, d1, t, g, tipo) {
       if (t <= 0) return;
+      // Subida como Subsurface: tramos de 2 s enteros (el último también, aunque recorra menos),
+      // y cada tramo carga gas a la profundidad de su inicio (la más honda del tramo).
+      let tramos = 0, paso = 0;
+      if (tipo === 'ascenso' && d0 > d1) { paso = pasoTramo((d0 - d1) / t); tramos = Math.ceil((d0 - d1) / paso - 1e-9); t = tramos / 30; }
       muestrear(d0, d1, t, g);
-      cargar(pN2, pHe, d0, d1, t, g);
+      if (tramos) for (let j = 0, d = d0; j < tramos; j++, d = Math.max(d1, d - paso)) cargar(pN2, pHe, d, d, 1 / 30, g);
+      else cargar(pN2, pHe, d0, d1, t, g);
       // oxígeno y gas, por pasos
       const n = Math.max(1, Math.ceil(t / 0.1));
       const dt = t / n;
@@ -213,7 +227,7 @@ const ENG = (() => {
     function puedeSubir(d, hasta, vel, g) {
       const n2 = pN2.slice(), he = pHe.slice(), dt = 2 / 60;
       while (d > hasta + 1e-9) {
-        const paso = Math.min(vel * dt, d);
+        const paso = Math.min(pasoTramo(vel), d);
         cargar(n2, he, d, d, dt, g);
         if (techoGF(n2, he) > d - paso + 1e-6) return false;
         d -= paso;
@@ -233,6 +247,9 @@ const ENG = (() => {
     if (primera >= p.prof) primera = Math.floor((p.prof - 0.001) / 3) * 3;
     // ancla del GF bajo: techo exacto con GF bajo al final del fondo, y como mínimo 1 bar por debajo de la superficie (Subsurface)
     pAncla = Math.max(psurf + 1, presionTolerada(gfL));
+    // Subsurface empieza la subida con un tramo de 2 s; si el fondo coincide con uno de sus niveles de parada,
+    // ese primer tramo no avanza: 2 s más a la profundidad del fondo.
+    if (NIVELES.some((m) => Math.abs(m - p.prof) < 1e-6)) segmento(p.prof, p.prof, 1 / 30, fondo, 'ascenso');
 
     const mejorGas = (d, actual) => {
       if (p.directo) return actual; // ascenso directo a superficie: sin cambios de gas
@@ -249,7 +266,7 @@ const ENG = (() => {
     const cambios = []; // runtime al terminar cada minuto de cambio de gas
     let inicioDeco = null;
     let gas = fondo, cur = p.prof;
-    let nivel = Math.floor((p.prof - 0.001) / 3) * 3;
+    let nivel = nivelBajo(p.prof);
     let guard = 0;
     while (nivel >= p.ultimaParada && guard++ < 200) {
       const vel = nivel >= primera ? p.vAsc1 : p.vAsc2;
@@ -261,7 +278,7 @@ const ENG = (() => {
         gas = nuevo; minimo = 1;
         if (gas.desde === null) gas.desde = nivel;
       }
-      const siguiente = nivel === p.ultimaParada ? 0 : nivel - 3;
+      const siguiente = nivel === p.ultimaParada ? 0 : nivelBajo(nivel);
       const velSig = (siguiente > 0 ? siguiente >= primera : nivel > primera) ? p.vAsc1 : p.vAsc2;
       let g2 = 0;
       // cambio de gas: siempre 1 minuto exacto, y no cuenta como descompresión
@@ -274,13 +291,14 @@ const ENG = (() => {
         if (frac > 1e-6) segmento(nivel, nivel, frac, gas, 'parada');
         while (!puedeSubir(nivel, siguiente, velSig, gas) && g2++ < 2000) segmento(nivel, nivel, 1, gas, 'parada');
         const ini = paradas.length ? paradas[paradas.length - 1].rt : inicioDeco;
-        paradas.push({ prof: nivel, tiempo: Math.round(runtime - ini), gas: gas.nombre, rt: runtime });
+        // al menos 1': si se llega segundos antes del minuto, la espera real es corta, pero no se muestra 0'
+        paradas.push({ prof: nivel, tiempo: Math.max(1, Math.round(runtime - ini)), gas: gas.nombre, rt: runtime });
       } else if (minimo > 0) {
         // solo el minuto de cambio de gas (no es parada obligatoria)
         paradas.push({ prof: nivel, tiempo: 1, gas: gas.nombre, rt: runtime, soloCambio: true });
       }
       if (g2 >= 2000) return { error: 'La descompresión no converge con estos datos.' };
-      nivel -= 3;
+      nivel = nivelBajo(nivel);
       if (nivel < p.ultimaParada) break;
     }
     // a superficie
